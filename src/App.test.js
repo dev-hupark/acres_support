@@ -43,6 +43,24 @@ test('authenticated member sees navigation dashboard', async () => {
   expect(await screen.findByRole('heading', { name: '대표용사님, 반갑습니다.' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: '사용자 정보 관리' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: '파티 관리' })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: '시스템 관리' })).not.toBeInTheDocument();
+});
+
+test('system ADMIN sees system menu and troop submenu', async () => {
+  dbProfile = { ...profile, role: 'ADMIN' };
+  supabase.auth.getSession.mockResolvedValue({ data: { session } });
+  render(<App />);
+  await screen.findByRole('heading', { name: '대표용사님, 반갑습니다.' });
+  expect(screen.getByRole('link', { name: '시스템 관리' })).toHaveAttribute('href', '#/system');
+  expect(screen.getByRole('link', { name: '병종 관리' })).toHaveAttribute('href', '#/system/troops');
+});
+
+test('ordinary user cannot open system management with a direct URL', async () => {
+  supabase.auth.getSession.mockResolvedValue({ data: { session } });
+  window.location.hash = '/system/troops';
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: '접근 권한이 없습니다.' })).toBeInTheDocument();
+  expect(rpc).not.toHaveBeenCalled();
 });
 
 test('first login requires character onboarding even on a party deep link', async () => {

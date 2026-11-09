@@ -1,0 +1,8 @@
+.troop-stat-form { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0 20px; }
+.troop-table-wrap { max-width: 100%; overflow-x: auto; }
+.troop-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+.troop-table th, .troop-table td { padding: 14px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.troop-table thead { background: #f7f9f4; }
+.troop-table tbody th { max-width: 190px; white-space: normal; overflow-wrap: anywhere; }
+.system-submenu { margin-left: 16px; border-left: 1px solid var(--line); padding-left: 8px; }
+@media (max-width:700px) { .troop-stat-form { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 12px; } .system-submenu { margin-left: 0; padding-left: 0; border-left: 0; } }

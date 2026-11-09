@@ -12,6 +12,7 @@
 - 일반 파티: 모집/내 목록, 검색/페이지 이동, 생성, 직접 링크, 신청/재신청/취소, 승인/반려, 탈퇴/강퇴/차단 해제, 추가 관리자 지정/해제, 참여 캐릭터 추가/교체/본인 제외/관리자 제외/재승인, 병종, 12일 일정, 공지 작성/수정/삭제/고정, 해체.
 - 연맹·연맹 전용 파티·공통 랭크 달력은 후속 개발이며 메뉴에 준비 중으로 표시합니다. 이 기능의 테이블을 동작하지 않는 빈 기능으로 선생성하지 않았습니다.
 - 병종은 운영자가 등록. 계정 탈퇴는 개인정보 보존·삭제 정책 확정 후 연결합니다.
+- 시스템 ADMIN 전용 시스템 관리/병종 관리 메뉴를 추가했습니다. 병종명·구분·6개 능력치 등록과 활성/비활성 전환을 지원합니다. 공통코드 테이블과 5개 병종 구분은 [시스템 관리 설계](SYSTEM_MANAGEMENT.md)를 참고하세요. `202611090005_system_troops.sql` 적용이 필요하며 현재 개발용 Supabase에는 적용 완료했습니다.
 - 파티 운영 관리 회원 목록은 현재 대표 캐릭터의 `닉네임 (게임 UID)`를 표시합니다. UID가 없으면 닉네임만 표시하며, UID는 운영 권한이 있는 조회자에게만 반환합니다. `202611090003_party_member_game_uid.sql`은 조회 함수를 갱신하며 개발용 Supabase에 적용했습니다. 기존 회원/캐릭터 데이터는 변경하지 않았습니다.
 - 참여 현황 및 캐릭터 추가·교체 선택 항목은 `캐릭터명 (게임 UID)`를 표시합니다. 실제 참여 캐릭터의 UID를 사용하며, 승인된 파티원에게 조회를 허용합니다. `202611090004_party_character_game_uid.sql`을 개발용 Supabase에 적용했습니다. 운영 관리의 대표 캐릭터 UID는 계속 운영 권한으로 제한합니다.
 
@@ -73,7 +74,7 @@ REACT_APP_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 REACT_APP_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_KEY
 ```
 
-기존 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`도 `scripts/react.js`가 위 두 이름으로만 매핑합니다. `.env.example` 참조. **SUPABASE_SECRET_KEY/service_role은 클라이언트에서 읽지 않으며 프런트용 접두사를 붙이면 안 됩니다.** 설정을 바꾸면 개발 서버를 다시 시작하세요.
+기존 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`도 `scripts/react.js`가 위 두 이름으로만 매핑합니다. **SUPABASE_SECRET_KEY/service_role은 클라이언트에서 읽지 않으며 프런트용 접두사를 붙이면 안 됩니다.** 설정을 바꾸면 개발 서버를 다시 시작하세요.
 
 ```powershell
 npm.cmd install
@@ -84,12 +85,12 @@ PowerShell 실행 정책 때문에 npm.ps1이 차단되는 경우를 고려해 `
 
 ## 병종 및 ADMIN 운영 설정
 
-실제 병종 목록은 임의로 추가하지 않았습니다. 병종이 없어도 미지정 저장과 일정 관리는 가능합니다. SQL Editor에서 실제 게임에 맞게 아래 형식으로 등록합니다.
+실제 병종 목록은 임의로 추가하지 않았습니다. 시스템 ADMIN으로 로그인해 시스템 관리 → 병종 관리에서 구분과 능력치를 입력해 등록하세요. 병종이 없어도 미지정 저장과 일정 관리는 가능합니다. SQL Editor로 직접 등록해야 하는 경우에는 다음 형식을 사용할 수 있습니다.
 
 ```sql
 -- 아래 값은 형식 설명용이므로 실제 코드/이름으로 교체해서 실행하세요.
-insert into public.acres_troops(code, name, sort_order)
-values ('실제_병종_코드', '실제 병종명', 1);
+insert into public.acres_troops(code, name, category, sort_order)
+values ('실제_병종_코드', '실제 병종명', 'SHIELD', 1);
 ```
 
 최초 ADMIN은 대상 사용자가 Google 로그인과 온보딩을 완료한 후 SQL Editor에서 지정합니다.
