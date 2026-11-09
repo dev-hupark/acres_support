@@ -11,13 +11,12 @@ const CELL_PIXELS = 1.3;
 
 export function MapCanvas({ entries, selected, onSelect, onCoordinate }) {
   const plane = useRef(null);
-  const [pointer, setPointer] = useState(null);
   const prefix = useId().replace(/:/g, '');
   const coordinate = event => pointFromPointer(event.clientX, event.clientY, plane.current.getBoundingClientRect());
   return <div className="party-map-view">
     <div className="map-viewport" aria-label="전장 지도"><div className="map-coordinate-frame" style={{ maxWidth: GRID_SIZE * CELL_PIXELS + 56 }}>
       <div className="map-plane" ref={plane} style={{ maxWidth: GRID_SIZE * CELL_PIXELS }}>
-        <svg viewBox={`0 0 ${GRID_SIZE} ${GRID_SIZE}`} role="group" aria-label="좌하단 원점의 파티 지도" onPointerMove={e => setPointer(coordinate(e))} onPointerLeave={() => setPointer(null)} onClick={e => onCoordinate(coordinate(e))}>
+        <svg viewBox={`0 0 ${GRID_SIZE} ${GRID_SIZE}`} role="group" aria-label="좌하단 원점의 파티 지도" onClick={e => onCoordinate(coordinate(e))}>
           <defs><pattern id={`${prefix}-minor`} width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="#d9e2d8" strokeWidth={0.6 / CELL_PIXELS} /></pattern><pattern id={`${prefix}-major`} width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="#9caf9b" strokeWidth={1 / CELL_PIXELS} /></pattern></defs>
           <rect width={GRID_SIZE} height={GRID_SIZE} fill="#f3f7ef" />
           <rect width={GRID_SIZE} height={GRID_SIZE} fill={`url(#${prefix}-minor)`} /><rect width={GRID_SIZE} height={GRID_SIZE} fill={`url(#${prefix}-major)`} />
