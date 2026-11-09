@@ -108,3 +108,43 @@ test('approved party members get the map tab between notices and management', as
   fireEvent.click(map);
   expect(await screen.findByRole('heading', { name: '맵 항목 등록' })).toBeInTheDocument();
 });
+
+test('party operation member names include game UID and handle absent UID', async () => {
+  const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const members = [
+    { id: 'member-1', user_id: 'applicant', display_name: '대기용사', game_uid: '000123', status: 'PENDING' },
+    { id: 'member-2', user_id: 'former-user', display_name: '탈퇴한 회원', game_uid: null, status: 'LEFT' },
+  ];
+  const detail = { party: { id, name: '운영 파티', status: 'ACTIVE', owner_id: profile.id, departure_date: '2026-11-20', deadline_at: '2026-11-19T00:00:00Z' }, mine: { status: 'APPROVED' }, can_read: true, can_manage: true, can_own: true, members, characters: [], schedules: [], notices: [] };
+  rpc.mockResolvedValue(detail);
+  supabase.auth.getSession.mockResolvedValue({ data: { session } });
+  window.location.hash = `/parties/${id}`;
+  render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: '운영 관리' }));
+  expect(screen.getByText('대기용사 (000123)')).toBeInTheDocument();
+  expect(screen.getByText('탈퇴한 회원')).toBeInTheDocument();
+  expect(screen.queryByText(/\(null\)|\(undefined\)/)).not.toBeInTheDocument();
+});
+
+test('participation status displays the participating character UID beside its name', async () => {
+  const writeText = jest.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+  const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const detail = {
+    party: { id, name: '참여 파티', status: 'ACTIVE', owner_id: 'other-user', departure_date: '2026-11-20', deadline_at: '2026-11-19T00:00:00Z' },
+    mine: { status: 'APPROVED' }, can_read: true, can_manage: false, can_own: false,
+    members: [{ id: 'member-1', user_id: 'other-user', display_name: '대표 이름', status: 'APPROVED' }],
+    characters: [{ id: 'pc-1', character_id: 'participating-character', user_id: 'other-user', name: '참여 부캐', game_uid: '000789', status: 'APPROVED' }],
+    schedules: [], notices: [],
+  };
+  rpc.mockResolvedValue(detail);
+  supabase.auth.getSession.mockResolvedValue({ data: { session } });
+  window.location.hash = `/parties/${id}`;
+  render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: '참여 현황' }));
+  expect(screen.getByText('참여 부캐 (000789)')).toBeInTheDocument();
+  expect(screen.getByText('대표 이름')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '참여 부캐 UID 복사' }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith('000789'));
+  expect(await screen.findByText('복사됨')).toBeInTheDocument();
+});

@@ -5,7 +5,7 @@ Google 로그인 → 최초 캐릭터 등록 → 메뉴형 대시보드 순서�
 
 ## 시작
 
-1. `supabase/migrations/202611090001_initial.sql`과 `202611090002_party_map.sql`을 순서대로 Supabase SQL Editor에서 각각 한 번 실행합니다. 초기 테이블이 이미 생성되어 있다면 두 번째 맵 마이그레이션만 적용하세요.
+1. `supabase/migrations/`의 SQL을 파일명 순서대로 Supabase SQL Editor에서 각각 한 번 실행합니다. 이미 적용한 마이그레이션은 재실행하지 마세요.
 2. Supabase Google OAuth provider와 Redirect URL을 설정합니다.
 3. `.env.example`을 참고해 `.env.local`에 공개 URL·공개 키를 설정합니다. 기존 VITE 형식의 공개 설정도 지원합니다.
 4. `npm.cmd install` 후 `npm.cmd run dev`를 실행합니다.

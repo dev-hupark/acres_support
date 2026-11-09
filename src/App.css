@@ -102,6 +102,10 @@ dd { margin: 0; font-size: 14px; }
 .manage-row { display: flex; gap: 18px; justify-content: space-between; align-items: center; }
 .manage-row strong { display: block; margin-bottom: 8px; }
 .roster-character { padding: 18px; background: #f7f9f4; border-radius: 8px; margin-top: 16px; }
+.roster-character-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.roster-character-heading > strong { overflow-wrap: anywhere; }
+.uid-copy { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.uid-copy-button { padding: 5px 9px; font-size: 12px; }
 .schedule-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
 .schedule-strip > div { background: white; padding: 10px 7px; display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--line); border-radius: 5px; font-size: 10px; overflow-wrap: anywhere; }
 .schedule-strip .partial { background: #fff7df; }

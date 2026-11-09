@@ -11,6 +11,8 @@ await db.exec(`create role anon; create role authenticated;
   grant usage on schema auth to anon,authenticated; grant execute on function auth.uid() to anon,authenticated;`);
 await db.exec(fs.readFileSync(new URL('../supabase/migrations/202611090001_initial.sql', import.meta.url), 'utf8'));
 await db.exec(fs.readFileSync(new URL('../supabase/migrations/202611090002_party_map.sql', import.meta.url), 'utf8'));
+await db.exec(fs.readFileSync(new URL('../supabase/migrations/202611090003_party_member_game_uid.sql', import.meta.url), 'utf8'));
+await db.exec(fs.readFileSync(new URL('../supabase/migrations/202611090004_party_character_game_uid.sql', import.meta.url), 'utf8'));
 const auths = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444'];
 for (const id of auths) await db.query('insert into auth.users values($1)', [id]);
 const login = async (index) => {
@@ -56,6 +58,7 @@ try {
   const swapCharacter = await call('acres_character_save', ['교체용', 'UID-SWAP']);
   await call('acres_participation_swap', [party, chars[0], swapCharacter]);
   let swapped = await call('acres_party_detail', [party]);
+  ok(swapped.characters.find(c=>c.character_id===swapCharacter).game_uid==='UID-SWAP','participating character UID is independent of main character UID');
   ok(swapped.characters.filter(c => c.status === 'APPROVED').length === 1 && swapped.characters.some(c => c.character_id === swapCharacter && c.status === 'APPROVED'), 'owner can atomically swap their last character');
   await call('acres_participation_swap', [party, swapCharacter, chars[0]]);
   await fails(() => call('acres_participation_swap', [party, chars[0], chars[1]]), /승인된 회원/);
@@ -69,10 +72,12 @@ try {
   const member1 = detail.mine.id;
   await fails(() => call('acres_member_action', [party, member1, 'approve']), /권한/);
   await login(0);
+  ok((await call('acres_party_detail',[party])).members.find(m=>m.id===member1).game_uid==='UID-1','operators see applicant main character UID before approval');
   await call('acres_member_action', [party, member1, 'approve']);
   await login(1);
   detail = await call('acres_party_detail', [party]);
   ok(detail.can_read && detail.characters.filter(c => c.user_id === users[1]).length === 0, 'approved member can have zero characters');
+  ok(detail.members.every(m=>m.game_uid===null),'ordinary member responses do not disclose game UIDs');
   // Map edits are available to all approved members, including those with zero characters.
   await fails(() => db.query('select * from public.acres_party_map_entries'), /permission denied/);
   const saveMap = (alias,x,y,faction='FRIENDLY',id=null,version=null,dead='N',target=party) => call('acres_map_save',[target,alias,x,y,'memo',dead,faction,id,version]);
@@ -108,6 +113,8 @@ try {
   await call('acres_participation_action', [party, chars[1], 'add']);
   detail = await call('acres_party_detail', [party]);
   const pc1 = detail.characters.find(c => c.character_id === chars[1]).id;
+  ok(detail.characters.find(c=>c.character_id===chars[0]).game_uid==='UID-0','ordinary approved member can see another participating character UID');
+  ok(detail.characters.find(c=>c.id===pc1).game_uid==='UID-1','participation returns its own character UID');
   await fails(() => call('acres_schedule_save', [pc1, day, 'PARTIAL', '   ']), /check constraint/);
   await fails(() => call('acres_schedule_save', [pc1, '2020-01-01', 'ABSENT', '']), /12일/);
   await call('acres_schedule_save', [pc1, day, 'PARTIAL', '21시부터']);
@@ -123,6 +130,7 @@ try {
   await fails(() => call('acres_participation_save', [pc1, null, null]), /소유자/);
   await call('acres_member_action', [party, member1, 'manager']);
   await login(1);
+  ok((await call('acres_party_detail',[party])).members.find(m=>m.user_id===users[0]).game_uid==='UID-0','additional manager can see current main character UID');
   const pc0 = (await call('acres_party_detail', [party])).characters.find(c => c.character_id === chars[0]).id;
   await fails(() => call('acres_participation_save', [pc0, null, null]), /소유자/);
   await fails(() => call('acres_party_update', [party, 'close']), /생성자/);
