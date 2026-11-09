@@ -12,17 +12,12 @@
 .map-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding-bottom: 14px; }
 .map-toolbar output { font: 11px/1.6 ui-monospace, Consolas, monospace; }
 .map-pointer { color: #456543; }
-.map-viewport { width: 100%; max-width: 837.3px; overflow: clip; border: 1px solid #b7c6b2; border-radius: 8px; background: #e9eee3; }
-.map-coordinate-frame { width: 100%; padding: 28px; }
+.map-viewport { width: 100%; max-width: 783.3px; overflow: clip; border: 1px solid #b7c6b2; border-radius: 8px; background: #e9eee3; }
 .map-plane { position: relative; width: 100%; aspect-ratio: 1; background: #f3f7ef; }
 .map-plane svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; cursor: crosshair; box-shadow: 0 0 0 1px #9aad95; }
 .map-entry-marker { cursor: pointer; }
 .map-entry-marker:focus { outline: none; }
 .map-entry-marker:focus > rect:nth-of-type(2) { stroke: #0d2414; stroke-width: 2px; }
-.map-x-axis { position: absolute; left: 0; right: 0; bottom: -22px; font: 10px ui-monospace, Consolas, monospace; color: #4c6444; pointer-events: none; }
-.map-x-axis span { position: absolute; transform: translateX(-50%); }
-.map-y-axis { position: absolute; top: 0; bottom: 0; left: -7px; font: 10px ui-monospace, Consolas, monospace; color: #4c6444; pointer-events: none; }
-.map-y-axis span { position: absolute; right: 0; transform: translateY(-50%); }
 .map-help { margin: 12px 0 24px; }
 .map-list-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
 .map-entry-list { min-width: 0; }

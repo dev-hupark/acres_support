@@ -6,7 +6,6 @@ import { DEAD_COLOR, FACTIONS, GRID_SIZE, entryColor, entryRect, footprintSize, 
 import './PartyMap.css';
 
 const blank = () => ({ alias: '', x: '', y: '', faction: 'FRIENDLY', memo: '', is_dead: 'N' });
-const ticks = [0, 100, 200, 300, 400, 500, 600];
 const CELL_PIXELS = 1.3;
 
 export function MapCanvas({ entries, selected, onSelect, onCoordinate }) {
@@ -14,7 +13,7 @@ export function MapCanvas({ entries, selected, onSelect, onCoordinate }) {
   const prefix = useId().replace(/:/g, '');
   const coordinate = event => pointFromPointer(event.clientX, event.clientY, plane.current.getBoundingClientRect());
   return <div className="party-map-view">
-    <div className="map-viewport" aria-label="전장 지도"><div className="map-coordinate-frame" style={{ maxWidth: GRID_SIZE * CELL_PIXELS + 56 }}>
+    <div className="map-viewport" aria-label="전장 지도">
       <div className="map-plane" ref={plane} style={{ maxWidth: GRID_SIZE * CELL_PIXELS }}>
         <svg viewBox={`0 0 ${GRID_SIZE} ${GRID_SIZE}`} role="group" aria-label="좌하단 원점의 파티 지도" onClick={e => onCoordinate(coordinate(e))}>
           <defs><pattern id={`${prefix}-minor`} width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="#d9e2d8" strokeWidth={0.6 / CELL_PIXELS} /></pattern><pattern id={`${prefix}-major`} width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="#9caf9b" strokeWidth={1 / CELL_PIXELS} /></pattern></defs>
@@ -30,10 +29,8 @@ export function MapCanvas({ entries, selected, onSelect, onCoordinate }) {
             </g>;
           })}
         </svg>
-        <div className="map-x-axis" aria-hidden="true">{ticks.map(t => <span key={t} style={{ left: `${(t + 0.5) / GRID_SIZE * 100}%` }}>{t}</span>)}</div>
-        <div className="map-y-axis" aria-hidden="true">{ticks.map(t => <span key={t} style={{ top: `${(600 - t + 0.5) / GRID_SIZE * 100}%` }}>{t}</span>)}</div>
       </div>
-    </div></div>
+    </div>
     <p className="small muted map-help">빈 칸을 클릭하면 입력 좌표가 선택됩니다. 항목을 클릭하면 상세 정보를 확인할 수 있습니다.</p>
   </div>;
 }
