@@ -13,6 +13,7 @@ await db.exec(fs.readFileSync(new URL('../supabase/migrations/202611090001_initi
 await db.exec(fs.readFileSync(new URL('../supabase/migrations/202611090002_party_map.sql', import.meta.url), 'utf8'));
 await db.exec(fs.readFileSync(new URL('../supabase/migrations/202611090003_party_member_game_uid.sql', import.meta.url), 'utf8'));
 await db.exec(fs.readFileSync(new URL('../supabase/migrations/202611090004_party_character_game_uid.sql', import.meta.url), 'utf8'));
+await db.exec(fs.readFileSync(new URL('../supabase/migrations/202611090005_system_troops.sql', import.meta.url), 'utf8'));
 const auths = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444'];
 for (const id of auths) await db.query('insert into auth.users values($1)', [id]);
 const login = async (index) => {
@@ -29,6 +30,7 @@ try {
   await login(null);
   await fails(() => call('acres_party_list'), /permission denied/);
   await fails(() => db.query('select * from public.acres_users'), /permission denied/);
+  await fails(() => call('acres_admin_troop_list'), /permission denied/);
   const users = [];
   const chars = [];
   for (let i = 0; i < 3; i++) {
@@ -37,6 +39,28 @@ try {
     chars.push((await db.query('select id from public.acres_characters')).rows[0].id);
     ok((await db.query('select * from public.acres_users')).rows.length === 1, 'RLS shows only own profile');
   }
+  await login(0);
+  await fails(() => call('acres_admin_troop_list'), /ADMIN/);
+  await fails(() => call('acres_admin_troop_create',['unauthorized','SHIELD']), /ADMIN/);
+  await fails(() => call('acres_admin_troop_status',['any-code','INACTIVE']), /ADMIN/);
+  await fails(() => db.query("update public.acres_common_codes set status='INACTIVE'"), /permission denied/);
+  await db.exec('reset role');
+  await db.query("update public.acres_users set role='ADMIN' where id=$1",[users[0]]);
+  await login(0);
+  const catalogue=await call('acres_admin_troop_list');
+  ok(catalogue.categories.map(c=>c.code).join(',')==='SHIELD,ARCHER,SPEAR,CAVALRY,SIEGE','five troop categories come from common codes');
+  const managedTroop=await call('acres_admin_troop_create',['Managed troop','SHIELD',100,0,1.5,9.25,null,3.125]);
+  const registered=(await call('acres_admin_troop_list')).troops.find(t=>t.code===managedTroop);
+  ok(registered.rage===0 && registered.attack_range===null && registered.movement===1.5,'numeric stats preserve zero, decimals and unspecified values');
+  await fails(() => call('acres_admin_troop_create',['invalid','UNKNOWN']), /병종 구분/);
+  await fails(() => call('acres_admin_troop_create',['negative','SHIELD',-1]), /check constraint/);
+  await fails(() => call('acres_admin_troop_create',['nan','SHIELD','NaN']), /check constraint/);
+  await fails(() => call('acres_admin_troop_status',[managedTroop,'DELETED']), /활성/);
+  await call('acres_admin_troop_status',[managedTroop,'INACTIVE']);
+  ok((await call('acres_admin_troop_list')).troops.some(t=>t.code===managedTroop && t.status==='INACTIVE'),'status changes never physically delete troops');
+  await call('acres_admin_troop_status',[managedTroop,'ACTIVE']);
+  await db.exec('reset role');
+  await db.query("update public.acres_users set role='USER' where id=$1",[users[0]]);
   await login(3);
   await fails(() => call('acres_onboard', ['중복', 'UID-0']), /duplicate key/);
   await fails(() => call('acres_party_list'), /최초 캐릭터/);
@@ -126,6 +150,24 @@ try {
   await login(1);
   await fails(() => call('acres_participation_save', [pc1, 'TEST_A', 'TEST_A']), /check constraint/);
   await call('acres_participation_save', [pc1, 'TEST_A', 'TEST_B']);
+  await call('acres_participation_save',[pc1,managedTroop,'TEST_B']);
+  await db.exec('reset role');
+  await db.query("update public.acres_users set role='ADMIN' where id=$1",[users[0]]);
+  await login(0);
+  await call('acres_admin_troop_status',[managedTroop,'INACTIVE']);
+  ok((await call('acres_party_detail',[party])).characters.find(c=>c.id===pc1).troop1===managedTroop,'deactivation preserves existing party selections');
+  await login(1);
+  await call('acres_participation_save',[pc1,managedTroop,'TEST_B']);
+  await call('acres_participation_save',[pc1,null,'TEST_B']);
+  await fails(() => call('acres_participation_save',[pc1,managedTroop,'TEST_B']), /사용 중지/);
+  await login(0);
+  await call('acres_admin_troop_status',[managedTroop,'ACTIVE']);
+  await login(1);
+  await call('acres_participation_save',[pc1,managedTroop,'TEST_B']);
+  ok((await call('acres_party_detail',[party])).characters.find(c=>c.id===pc1).troop1===managedTroop,'reactivated troops are selectable again');
+  await call('acres_participation_save',[pc1,'TEST_A','TEST_B']);
+  await db.exec('reset role');
+  await db.query("update public.acres_users set role='USER' where id=$1",[users[0]]);
   await login(0);
   await fails(() => call('acres_participation_save', [pc1, null, null]), /소유자/);
   await call('acres_member_action', [party, member1, 'manager']);
