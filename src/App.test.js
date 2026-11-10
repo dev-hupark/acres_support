@@ -172,24 +172,44 @@ test('participation status displays the participating character UID beside its n
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-test('compact character schedule button opens modal and refreshes after saving', async () => {
+test('merged participation list opens editable schedule modal and refreshes after saving', async () => {
   const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   const detail = {
     party: { id, name: '내 파티', status: 'ACTIVE', owner_id: profile.id, departure_date: '2026-11-20', deadline_at: '2026-11-19T00:00:00Z' },
-    mine: { status: 'APPROVED' }, can_read: true, can_manage: true, can_own: true, members: [],
+    mine: { status: 'APPROVED' }, can_read: true, can_manage: true, can_own: true, members: [{ id: 'm1', user_id: profile.id, display_name: character.name, status: 'APPROVED' }],
     characters: [{ ...character, id: 'pc-1', character_id: character.id, user_id: profile.id, status: 'APPROVED' }], schedules: [], notices: [],
   };
   rpc.mockImplementation(async name => name === 'acres_schedule_replace' ? null : detail);
   supabase.auth.getSession.mockResolvedValue({ data: { session } });
   window.location.hash = `/parties/${id}`;
   render(<App />);
-  fireEvent.click(await screen.findByRole('button', { name: '캐릭터·일정' }));
-  expect(screen.getByLabelText('대표용사 병종1')).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: '참여 현황' }));
+  expect(screen.queryByRole('button', { name: '캐릭터·일정' })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('대표용사 병종1')).not.toBeInTheDocument();
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  const open = screen.getByRole('button', { name: '대표용사 일정관리' });
+  const open = screen.getByRole('button', { name: /대표용사 일정확인/ });
   fireEvent.click(open);
   const dialog = screen.getByRole('dialog', { name: '일정관리' });
   fireEvent.click(within(dialog).getByRole('button', { name: '저장' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(rpc).toHaveBeenCalledWith('acres_schedule_replace', expect.objectContaining({ p_id: 'pc-1', p_schedules: expect.any(Array) }));
+});
+
+test.each([['ACTIVE', true], ['DISSOLVED', false]])('manager can edit other members only in an active party (%s)', async (status, editable) => {
+  const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const detail = {
+    party: { id, name: '운영 파티', status, owner_id: 'creator', departure_date: '2026-11-20', deadline_at: '2026-11-19T00:00:00Z' },
+    mine: { status: 'APPROVED', is_manager: true }, can_read: true, can_manage: true, can_own: false,
+    members: [{ id: 'm-other', user_id: 'other', display_name: '다른 회원', status: 'APPROVED' }],
+    characters: [{ id: 'pc-other', user_id: 'other', name: '타인 캐릭터', status: 'APPROVED' }], schedules: [], notices: [],
+  };
+  rpc.mockResolvedValue(detail);
+  supabase.auth.getSession.mockResolvedValue({ data: { session } });
+  window.location.hash = `/parties/${id}`;
+  render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: '참여 현황' }));
+  expect(screen.queryByRole('button', { name: '타인 캐릭터 병종 수정' }) !== null).toBe(editable);
+  fireEvent.click(screen.getByRole('button', { name: /타인 캐릭터 일정확인/ }));
+  expect(screen.getByRole('dialog', { name: editable ? '일정관리' : '일정확인' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '저장' }) !== null).toBe(editable);
 });

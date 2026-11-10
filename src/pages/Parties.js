@@ -3,8 +3,7 @@ import { rpc, supabase, errorMessage } from '../lib/supabase';
 import { dateTime, kstToday, labels, toInstant } from '../lib/format';
 import { Empty, Field, useAction } from '../components/Forms';
 import PartyMap from './PartyMap';
-import ParticipationSummaryRow from '../components/ParticipationSummaryRow';
-import PartyCharacterRow from '../components/PartyCharacterRow';
+import ParticipationOverview from '../components/ParticipationOverview';
 import ScheduleModal from '../components/ScheduleModal';
 
 const Badge = ({ status }) => <span className={`tag ${status === 'APPROVED' ? 'accent' : ''}`}>{labels[status] || status}</span>;
@@ -58,7 +57,6 @@ function PartyDetail({ id, profile, characters }) {
   const [tab, setTab] = useState('overview');
   const [noticeEdit, setNoticeEdit] = useState(null);
   const [scheduleId, setScheduleId] = useState(null);
-  const [scheduleViewId, setScheduleViewId] = useState(null);
   const action = useAction();
   useEffect(() => {
     let active = true; setLoading(true); setError(''); setData(null);
@@ -72,8 +70,9 @@ function PartyDetail({ id, profile, characters }) {
     let active = true;
     const refresh = async () => {
       try {
-        const next = await rpc('acres_party_detail', { p_party: id });
-        if (active) { setData(next); setError(''); }
+        const [next, catalog] = await Promise.all([rpc('acres_party_detail', { p_party: id }), supabase.from('acres_troops').select('*').order('sort_order')]);
+        if (catalog.error) throw catalog.error;
+        if (active) { setData(next); setTroops(catalog.data); setError(''); }
       } catch (e) { if (active) { setData(null); setError(errorMessage(e)); } }
     };
     window.addEventListener('focus', refresh);
@@ -91,14 +90,13 @@ function PartyDetail({ id, profile, characters }) {
   const { party: p, mine, can_read: canRead, can_manage: canManage, can_own: canOwn } = data;
   const active = p.status === 'ACTIVE';
   const owner = p.owner_id === profile.id;
-  const admin = profile.role === 'ADMIN';
   const ownApproved = mine?.status === 'APPROVED';
   const schedulePc = data.characters.find(pc => pc.id === scheduleId && pc.status === 'APPROVED');
-  const scheduleViewPc = data.characters.find(pc => pc.id === scheduleViewId && pc.status === 'APPROVED');
+  const refreshDetail = async () => { const next = await rpc('acres_party_detail', { p_party: id }); setData(next); };
   const memberAction = (m, type, confirmation) => perform('acres_member_action', { p_party: id, p_member: m.id, p_action: type }, confirmation);
   const pcAction = (characterId, type, confirmation) => perform('acres_participation_action', { p_party: id, p_character: characterId, p_action: type }, confirmation);
   const mayApply = active && !p.applications_closed && !mine?.blocked && !['APPROVED', 'PENDING'].includes(mine?.status);
-  const visibleTabs = [{ key: 'overview', label: '기본 정보' }, ...(canRead ? [{ key: 'members', label: '참여 현황' }, { key: 'characters', label: '캐릭터·일정' }, { key: 'notices', label: '파티 공지' }, { key: 'map', label: '맵 관리' }] : []), ...(canManage ? [{ key: 'manage', label: '운영 관리' }] : [])];
+  const visibleTabs = [{ key: 'overview', label: '기본 정보' }, ...(canRead ? [{ key: 'members', label: '참여 현황' }, { key: 'notices', label: '파티 공지' }, { key: 'map', label: '맵 관리' }] : []), ...(canManage ? [{ key: 'manage', label: '운영 관리' }] : [])];
   const selectedTab = visibleTabs.some(t => t.key === tab) ? tab : 'overview';
   return <><a className="back-link" href="#/parties">← 파티 목록</a><div className="section-heading"><div><div className="actions"><span className="tag">일반 파티</span><Badge status={p.status} />{mine && <Badge status={mine.status} />}</div><h1>{p.name}</h1></div><button disabled={action.busy} onClick={() => setVersion(v => v + 1)}>새로고침</button></div><p className="muted intro">출발 {p.departure_date} · 모집 마감 예정 {dateTime(p.deadline_at)}</p>{action.notice}
     {!active && <div className="alert">해체된 파티입니다. 조회만 가능하며 복구할 수 없습니다.</div>}
@@ -110,12 +108,7 @@ function PartyDetail({ id, profile, characters }) {
       {active && ownApproved && !owner && <button className="danger-text" disabled={action.busy} onClick={() => memberAction(mine, 'leave', '파티에서 탈퇴할까요? 모든 참여 캐릭터가 제외되고 이 파티의 병종·일정이 삭제됩니다.')}>파티 탈퇴</button>}
       {!canRead && <p className="muted">승인된 파티원만 참여 현황·캐릭터·일정·공지를 조회할 수 있습니다.</p>}
     </section>}
-    {selectedTab === 'members' && <section className="panel"><h2>참여 현황</h2>{data.members.filter(m => m.status === 'APPROVED').map(m => <article key={m.id} className="member-block"><div className="section-heading"><strong>{m.display_name}</strong><span className="tag">{m.user_id === p.owner_id ? '생성자' : m.is_manager ? '추가 관리자' : '파티원'}</span></div>{data.characters.filter(pc => pc.user_id === m.user_id && pc.status === 'APPROVED').map(pc => <ParticipationSummaryRow key={pc.id} pc={pc} troops={troops} schedules={data.schedules} departureDate={p.departure_date} onSchedule={setScheduleViewId} />)}{!data.characters.some(pc => pc.user_id === m.user_id && pc.status === 'APPROVED') && <p className="small muted">참여 캐릭터가 아직 없습니다.</p>}</article>)}</section>}
-    {selectedTab === 'characters' && <section className="panel"><h2>참여 캐릭터·일정</h2><p className="muted">병종과 일정은 캐릭터 소유자 또는 ADMIN만 수정할 수 있습니다.</p>
-      {active && ownApproved && <div className="add-characters"><h3>내 캐릭터 추가</h3><div className="checks">{characters.map(c => { const pc = data.characters.find(x => x.character_id === c.id); return <button disabled={action.busy || ['APPROVED', 'PENDING_REAPPROVAL'].includes(pc?.status)} key={c.id} onClick={() => pcAction(c.id, 'add')}>{characterLabel(c)} · {pc ? labels[pc.status] : '추가'}</button>; })}</div>{!characters.length && <a href="#/account">내 캐릭터 등록</a>}</div>}
-      {!data.characters.length && <Empty>참여 캐릭터가 없습니다.</Empty>}
-      {data.characters.map(pc => <PartyCharacterRow key={`${pc.id}:${pc.troop1}:${pc.troop2}`} pc={pc} profile={profile} party={p} participations={data.characters} characters={characters} troops={troops} canManage={canManage} busy={action.busy} perform={perform} pcAction={pcAction} onSchedule={setScheduleId} />)}
-    </section>}
+    {selectedTab === 'members' && <ParticipationOverview data={data} troops={troops} profile={profile} characters={characters} onSchedule={setScheduleId} onSaved={refreshDetail} pcAction={pcAction} busy={action.busy} />}
     {selectedTab === 'notices' && <section className="panel"><h2>파티 공지</h2>{!data.notices.length && <Empty>등록된 공지가 없습니다.</Empty>}{data.notices.map(n => <article className="notice" key={n.id}>{n.pinned && <span className="tag accent">상단 고정</span>}<h3>{n.title}</h3><p className="small muted">{dateTime(n.created_at)}</p><p className="notice-body">{n.body}</p>{active && canManage && <div className="actions"><button disabled={action.busy} onClick={() => setNoticeEdit(n)}>수정</button><button disabled={action.busy} className="danger-text" onClick={() => perform('acres_notice_save', { p_party: id, p_id: n.id, p_title: n.title, p_body: n.body, p_pinned: n.pinned, p_delete: true }, '이 공지를 삭제할까요?')}>삭제</button><button disabled={action.busy} onClick={() => perform('acres_notice_save', { p_party: id, p_id: n.id, p_title: n.title, p_body: n.body, p_pinned: !n.pinned })}>{n.pinned ? '고정 해제' : '상단 고정'}</button></div>}</article>)}{active && canManage && <div className="notice-compose"><h3>{noticeEdit ? '공지 수정' : '공지 작성'}</h3><NoticeForm key={noticeEdit?.id || 'new'} initial={noticeEdit} busy={action.busy} cancel={() => setNoticeEdit(null)} onSave={args => { perform('acres_notice_save', { p_party: id, ...args }).then(ok => { if (ok) setNoticeEdit(null); }); }} /></div>}</section>}
     {selectedTab === 'map' && <PartyMap partyId={id} partyStatus={p.status} />}
     {selectedTab === 'manage' && <section className="panel"><h2>파티 운영 관리</h2>{!active ? <Empty>해체된 파티는 변경할 수 없습니다.</Empty> : <>
@@ -127,8 +120,7 @@ function PartyDetail({ id, profile, characters }) {
       </div></article>)}
       {canOwn && <div className="management-box"><h3>파티 해체</h3><p className="muted">해체한 파티는 복구할 수 없으며 모든 변경 작업이 중지됩니다.</p><button className="danger" disabled={action.busy} onClick={() => perform('acres_party_update', { p_party: id, p_action: 'dissolve' }, '파티를 해체할까요? 이 작업은 되돌릴 수 없습니다.')}>파티 해체</button></div>}
     </>}</section>}
-    {selectedTab === 'members' && scheduleViewPc && canRead && <ScheduleModal key={`view-${scheduleViewPc.id}`} pc={scheduleViewPc} departureDate={p.departure_date} schedules={data.schedules} readOnly onClose={() => setScheduleViewId(null)} />}
-    {selectedTab === 'characters' && schedulePc && active && canRead && (schedulePc.user_id === profile.id || admin) && <ScheduleModal key={schedulePc.id} pc={schedulePc} departureDate={p.departure_date} schedules={data.schedules} onClose={() => setScheduleId(null)} onSaved={async () => { const next = await rpc('acres_party_detail', { p_party: id }); setData(next); }} />}
+    {selectedTab === 'members' && schedulePc && canRead && <ScheduleModal key={`${schedulePc.id}:${active && (schedulePc.user_id === profile.id || canManage)}`} pc={schedulePc} departureDate={p.departure_date} schedules={data.schedules} readOnly={!active || !(schedulePc.user_id === profile.id || canManage)} onClose={() => setScheduleId(null)} onSaved={refreshDetail} />}
   </>;
 }
 

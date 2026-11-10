@@ -107,22 +107,19 @@ dd { margin: 0; font-size: 14px; }
 .roster-character-flat { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding-block: 12px; margin-top: 8px; }
 .roster-character-flat > strong { overflow-wrap: anywhere; min-width: 0; }
 .roster-troops { margin: 0; }
+.roster-member-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.character-add-button, .roster-row-actions > button { padding: 7px 10px; font-size: 12px; }
+.roster-row-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.roster-editor { flex-basis: 100%; min-width: 0; }
+.roster-pending { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 0; font-size: 12px; color: var(--muted); }
+.character-selection-list { max-height: 50vh; overflow-y: auto; margin-bottom: 20px; }
+.character-selection-list .check { align-items: flex-start; }
+.character-selection-list .check span { overflow-wrap: anywhere; }
 .roster-schedule-button { margin-left: auto; flex-shrink: 0; padding: 7px 10px; font-size: 12px; }
 .roster-schedule-button.is-full { color: #2563eb; border-color: #60a5fa; }
 .roster-schedule-button.is-full:hover:not(:disabled) { color: #1d4ed8; border-color: #3b82f6; background: #eff6ff; }
-.roster-character-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-.roster-character-heading > strong { overflow-wrap: anywhere; }
 .uid-copy { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .uid-copy-button { padding: 5px 9px; font-size: 12px; }
-.schedule-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
-.schedule-strip > div { background: white; padding: 10px 7px; display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--line); border-radius: 5px; font-size: 10px; overflow-wrap: anywhere; }
-.schedule-strip .partial { background: #fff7df; }
-.schedule-strip .absent { background: #faece6; }
-.schedule-strip small { font-size: 10px; white-space: pre-wrap; }
-.party-character-flat { padding: 14px 0; border-top: 1px solid var(--line); }
-.party-character-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.party-character-top > strong { min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
-.schedule-open-button { margin-left: auto; flex-shrink: 0; padding: 7px 10px; font-size: 12px; }
 .compact-troops { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; align-items: center; gap: 10px; }
 .compact-troops label { display: flex; align-items: center; gap: 7px; min-width: 0; white-space: nowrap; font-size: 12px; }
 .compact-troops select { min-width: 0; padding: 8px; font-size: 12px; }
@@ -134,7 +131,6 @@ dd { margin: 0; font-size: 14px; }
 .management-box form { margin-top: 25px; max-width: 460px; }
 .notice-body { white-space: pre-wrap; overflow-wrap: anywhere; }
 .onboarding { max-width: 850px; }
-.swap-form { max-width: 470px; margin-top: 20px; }
 @media (max-width: 1000px) {
   .sidebar { width: 210px; padding: 25px 15px; }
   .workspace { margin-left: 210px; width: calc(100% - 210px); }
@@ -163,8 +159,9 @@ dd { margin: 0; font-size: 14px; }
   .menu-grid, .form-grid { grid-template-columns: 1fr; }
   .panel { padding: 20px; }
   .party-row, .manage-row { flex-direction: column; align-items: flex-start; }
-  .schedule-strip { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .search { flex-wrap: wrap; }
   .section-heading { flex-wrap: wrap; }
+  .roster-editor .compact-troops { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .roster-editor .compact-troops > .actions { grid-column: 1 / -1; justify-content: flex-end; }
   .details { gap: 14px; }
 }

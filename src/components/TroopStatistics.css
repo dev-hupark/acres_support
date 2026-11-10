@@ -1,0 +1,29 @@
+.troop-stat-summary { display: flex; flex-wrap: wrap; gap: 10px 24px; border-radius: 8px; background: #f4f7ef; padding: 16px; font-size: 12px; }
+.troop-stat-summary strong { margin-left: 5px; }
+.troop-category-chart { margin: 24px 0; }
+.troop-category-chart figcaption { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.troop-category-chart figcaption span { display: block; font-weight: 400; margin-top: 6px; }
+.troop-chart-axis { position: relative; margin: 0 8px 8px 82px; height: 18px; font-size: 10px; color: var(--muted); }
+.troop-chart-axis span { position: absolute; transform: translateX(-50%); }
+.troop-category-row { display: grid; grid-template-columns: 70px minmax(0,1fr); gap: 8px 12px; margin-bottom: 22px; }
+.troop-category-label { display: flex; flex-direction: column; justify-content: center; gap: 4px; font-size: 13px; }
+.troop-category-label span { font-size: 11px; color: var(--muted); }
+.troop-category-track { background: #edf0e9; border-radius: 6px; height: 34px; align-self: center; }
+.troop-category-stack { display: flex; height: 100%; border-radius: 6px; }
+.troop-chart-segment { display: block; min-width: 0; padding: 0; height: 100%; border: 0; border-radius: 0; box-shadow: inset -1px 0 #ffffff70; }
+.troop-chart-segment:first-child { border-radius: 6px 0 0 6px; }
+.troop-chart-segment:last-child { border-radius: 0 6px 6px 0; }
+.troop-chart-segment:only-child { border-radius: 6px; }
+.troop-chart-segment.selected { box-shadow: inset 0 0 0 2px #152c4490; }
+.troop-chart-segment:hover:not(:disabled) { filter: brightness(1.12); }
+.troop-category-legend { grid-column: 2; display: flex; flex-wrap: wrap; gap: 5px 8px; }
+.troop-category-legend button { display: inline-flex; gap: 6px; padding: 5px 7px; font-size: 11px; border-color: transparent; }
+.troop-category-legend button.selected { border-color: #a7b4a0; background: #f4f7ef; }
+.troop-category-legend i, .troop-selection-detail h3 i { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.troop-category-legend button > span { overflow-wrap: anywhere; text-align: left; }
+.troop-selection-detail { border-top: 1px solid var(--line); padding-top: 20px; }
+.troop-selection-detail h3 { display: flex; gap: 8px; align-items: center; }
+.troop-selection-person { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 0; border-top: 1px solid var(--line); font-size: 12px; }
+.troop-selection-person > span:not(.tag) { color: var(--muted); overflow-wrap: anywhere; }
+.troop-selection-person .tag { margin-left: auto; }
+@media (max-width:480px) { .troop-category-row { grid-template-columns: 54px minmax(0,1fr); gap: 8px; } .troop-chart-axis { margin-left: 62px; } .troop-stat-summary { gap: 8px 16px; padding: 12px; } }
