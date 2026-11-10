@@ -7,10 +7,24 @@ import './PartyMap.css';
 
 const blank = () => ({ alias: '', x: '', y: '', faction: 'FRIENDLY', memo: '', is_dead: 'N' });
 const CELL_PIXELS = 1.3;
+const MARKER_RADIUS_PIXELS = 6;
 
 export function MapCanvas({ entries, selected, onSelect, onCoordinate }) {
   const plane = useRef(null);
+  const [pixelsPerUnit, setPixelsPerUnit] = useState(CELL_PIXELS);
   const prefix = useId().replace(/:/g, '');
+  useEffect(() => {
+    const element = plane.current;
+    const measure = () => {
+      const width = element.getBoundingClientRect().width;
+      if (width > 0) setPixelsPerUnit(width / GRID_SIZE);
+    };
+    measure();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    observer?.observe(element);
+    window.addEventListener('resize', measure);
+    return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
+  }, []);
   const coordinate = event => pointFromPointer(event.clientX, event.clientY, plane.current.getBoundingClientRect());
   return <div className="party-map-view">
     <div className="map-viewport" aria-label="전장 지도">
@@ -19,13 +33,15 @@ export function MapCanvas({ entries, selected, onSelect, onCoordinate }) {
           <defs><pattern id={`${prefix}-minor`} width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="#d9e2d8" strokeWidth={0.6 / CELL_PIXELS} /></pattern><pattern id={`${prefix}-major`} width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="#9caf9b" strokeWidth={1 / CELL_PIXELS} /></pattern></defs>
           <rect width={GRID_SIZE} height={GRID_SIZE} fill="#f3f7ef" />
           <rect width={GRID_SIZE} height={GRID_SIZE} fill={`url(#${prefix}-minor)`} /><rect width={GRID_SIZE} height={GRID_SIZE} fill={`url(#${prefix}-major)`} />
-          {entries.map(entry => {
-            const r = entryRect(entry); const chosen = selected === entry.id; const hit = Math.max(r.width, 14 / CELL_PIXELS);
+          {[...entries].sort((a, b) => Number(a.id === selected) - Number(b.id === selected)).map(entry => {
+            const r = entryRect(entry); const chosen = selected === entry.id;
+            const cx = r.x + r.width / 2; const cy = r.y + r.height / 2;
+            const radius = MARKER_RADIUS_PIXELS / pixelsPerUnit;
             return <g key={entry.id} role="button" tabIndex={0} aria-label={`${entry.alias}, ${FACTIONS[entry.faction].name}, X ${entry.x} Y ${entry.y}, ${r.width}×${r.height}칸${entry.is_dead === 'Y' ? ', 사망' : ''}`} onClick={e => { e.stopPropagation(); onSelect(entry); }} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(entry); } }} className="map-entry-marker">
               <title>{entry.alias} · ({entry.x}, {entry.y}) · {entry.is_dead === 'Y' ? '사망' : FACTIONS[entry.faction].name}{entry.memo ? ` · ${entry.memo}` : ''}</title>
-              <rect x={r.x + r.width / 2 - hit / 2} y={r.y + r.height / 2 - hit / 2} width={hit} height={hit} fill="transparent" />
-              <rect {...r} fill={entryColor(entry)} stroke={chosen ? '#102e20' : entryColor(entry)} strokeWidth={(chosen ? 2 : 1) / CELL_PIXELS} data-testid={`map-footprint-${entry.id}`} />
-              {chosen && <><circle cx={r.x + r.width / 2} cy={r.y + r.height / 2} r={Math.max(r.width, 12 / CELL_PIXELS)} fill="none" stroke="#254c3c" strokeWidth={1.5 / CELL_PIXELS} strokeDasharray={`${3 / CELL_PIXELS} ${2 / CELL_PIXELS}`} pointerEvents="none" /><text x={r.x + r.width / 2} y={r.y < 22 / CELL_PIXELS ? r.y + r.height + 18 / CELL_PIXELS : r.y - 10 / CELL_PIXELS} textAnchor={entry.x > 500 ? 'end' : entry.x < 100 ? 'start' : 'middle'} fontSize={12 / CELL_PIXELS} fill="#203a29" paintOrder="stroke" stroke="#f3f7ef" strokeWidth={3 / CELL_PIXELS} pointerEvents="none">{entry.alias.slice(0, 28)} ({entry.x}, {entry.y})</text></>}
+              <circle cx={cx} cy={cy} r={8 / pixelsPerUnit} fill="transparent" />
+              <circle className="map-marker-dot" cx={cx} cy={cy} r={radius} fill={entryColor(entry)} stroke={chosen ? '#102e20' : '#fff'} strokeWidth={(chosen ? 2 : 1.5) / pixelsPerUnit} data-testid={`map-marker-${entry.id}`} />
+              {chosen && <><circle cx={cx} cy={cy} r={10 / pixelsPerUnit} fill="none" stroke="#254c3c" strokeWidth={1.5 / pixelsPerUnit} strokeDasharray={`${3 / pixelsPerUnit} ${2 / pixelsPerUnit}`} pointerEvents="none" /><text x={cx} y={cy < 24 / pixelsPerUnit ? cy + radius + 16 / pixelsPerUnit : cy - radius - 8 / pixelsPerUnit} textAnchor={entry.x > 500 ? 'end' : entry.x < 100 ? 'start' : 'middle'} fontSize={12 / pixelsPerUnit} fill="#203a29" paintOrder="stroke" stroke="#f3f7ef" strokeWidth={3 / pixelsPerUnit} pointerEvents="none">{entry.alias.slice(0, 28)} ({entry.x}, {entry.y})</text></>}
             </g>;
           })}
         </svg>

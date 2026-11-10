@@ -6,15 +6,16 @@ jest.mock('../lib/supabase', () => ({ rpc: jest.fn(), errorMessage: error => err
 const entry = { id: 'map-1', alias: '전초기지', x: 0, y: 0, faction: 'FRIENDLY', memo: '공동 관리', is_dead: 'N', version: 3, created_at: '2026-11-09T00:00:00Z', updated_at: '2026-11-09T01:00:00Z' };
 beforeEach(() => { jest.clearAllMocks(); rpc.mockResolvedValue([entry]); });
 
-test('map draws exact footprints with inverted SVG Y and other at upper right', () => {
+test('map draws enlarged circles at footprint centers with upward Y and preserves death color', () => {
   render(<MapCanvas entries={[entry, { ...entry, id: 'corner', x: 600, y: 600, faction: 'OTHER', is_dead: 'Y' }]} onSelect={jest.fn()} onCoordinate={jest.fn()} />);
-  const origin = screen.getByTestId('map-footprint-map-1');
-  expect(origin).toHaveAttribute('y', '599');
-  expect(origin).toHaveAttribute('width', '2');
-  const corner = screen.getByTestId('map-footprint-corner');
-  expect(corner).toHaveAttribute('x', '600');
-  expect(corner).toHaveAttribute('y', '0');
-  expect(corner).toHaveAttribute('width', '1');
+  const origin = screen.getByTestId('map-marker-map-1');
+  expect(origin.tagName).toBe('circle');
+  expect(origin).toHaveAttribute('cx', '1');
+  expect(origin).toHaveAttribute('cy', '600');
+  expect(Number(origin.getAttribute('r')) * 1.3).toBeCloseTo(6);
+  const corner = screen.getByTestId('map-marker-corner');
+  expect(corner).toHaveAttribute('cx', '600.5');
+  expect(corner).toHaveAttribute('cy', '0.5');
   expect(corner).toHaveAttribute('fill', '#8a929b');
 });
 

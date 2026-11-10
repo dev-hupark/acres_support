@@ -12,12 +12,12 @@
 .map-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding-bottom: 14px; }
 .map-toolbar output { font: 11px/1.6 ui-monospace, Consolas, monospace; }
 .map-pointer { color: #456543; }
-.map-viewport { width: 100%; max-width: 783.3px; overflow: clip; border: 1px solid #b7c6b2; border-radius: 8px; background: #e9eee3; }
+.map-viewport { width: 100%; max-width: 799.3px; padding: 8px; overflow: clip; border: 1px solid #b7c6b2; border-radius: 8px; background: #f3f7ef; }
 .map-plane { position: relative; width: 100%; aspect-ratio: 1; background: #f3f7ef; }
-.map-plane svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; cursor: crosshair; box-shadow: 0 0 0 1px #9aad95; }
+.map-plane svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; cursor: crosshair; box-shadow: 0 0 0 1px #9aad95; }
 .map-entry-marker { cursor: pointer; }
 .map-entry-marker:focus { outline: none; }
-.map-entry-marker:focus > rect:nth-of-type(2) { stroke: #0d2414; stroke-width: 2px; }
+.map-entry-marker:focus > .map-marker-dot { stroke: #0d2414; }
 .map-help { margin: 12px 0 24px; }
 .map-list-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
 .map-entry-list { min-width: 0; }
