@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from './App';
 import { rpc, supabase } from './lib/supabase';
 
@@ -165,4 +165,31 @@ test('participation status displays the participating character UID beside its n
   fireEvent.click(screen.getByRole('button', { name: '참여 부캐 UID 복사' }));
   await waitFor(() => expect(writeText).toHaveBeenCalledWith('000789'));
   expect(await screen.findByText('복사됨')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /참여 부캐 일정확인/ }));
+  const viewDialog = screen.getByRole('dialog', { name: '일정확인' });
+  expect(within(viewDialog).queryByRole('button', { name: '저장' })).not.toBeInTheDocument();
+  fireEvent.click(within(viewDialog).getByRole('button', { name: '일정확인 닫기' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+test('compact character schedule button opens modal and refreshes after saving', async () => {
+  const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const detail = {
+    party: { id, name: '내 파티', status: 'ACTIVE', owner_id: profile.id, departure_date: '2026-11-20', deadline_at: '2026-11-19T00:00:00Z' },
+    mine: { status: 'APPROVED' }, can_read: true, can_manage: true, can_own: true, members: [],
+    characters: [{ ...character, id: 'pc-1', character_id: character.id, user_id: profile.id, status: 'APPROVED' }], schedules: [], notices: [],
+  };
+  rpc.mockImplementation(async name => name === 'acres_schedule_replace' ? null : detail);
+  supabase.auth.getSession.mockResolvedValue({ data: { session } });
+  window.location.hash = `/parties/${id}`;
+  render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: '캐릭터·일정' }));
+  expect(screen.getByLabelText('대표용사 병종1')).toBeInTheDocument();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  const open = screen.getByRole('button', { name: '대표용사 일정관리' });
+  fireEvent.click(open);
+  const dialog = screen.getByRole('dialog', { name: '일정관리' });
+  fireEvent.click(within(dialog).getByRole('button', { name: '저장' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(rpc).toHaveBeenCalledWith('acres_schedule_replace', expect.objectContaining({ p_id: 'pc-1', p_schedules: expect.any(Array) }));
 });

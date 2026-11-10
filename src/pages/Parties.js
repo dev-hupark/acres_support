@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { rpc, supabase, errorMessage } from '../lib/supabase';
-import { dateTime, kstToday, labels, toInstant, daysFrom } from '../lib/format';
+import { dateTime, kstToday, labels, toInstant } from '../lib/format';
 import { Empty, Field, useAction } from '../components/Forms';
 import PartyMap from './PartyMap';
-import CopyUidButton from '../components/CopyUidButton';
+import ParticipationSummaryRow from '../components/ParticipationSummaryRow';
+import PartyCharacterRow from '../components/PartyCharacterRow';
+import ScheduleModal from '../components/ScheduleModal';
 
 const Badge = ({ status }) => <span className={`tag ${status === 'APPROVED' ? 'accent' : ''}`}>{labels[status] || status}</span>;
 const characterLabel = character => `${character.name || '삭제된 캐릭터'}${character.game_uid ? ` (${character.game_uid})` : ''}`;
@@ -37,27 +39,10 @@ function PartyList() {
   return <><div className="section-heading"><div><p className="eyebrow">PARTY WORKSPACE</p><h1>파티 관리</h1></div><a href="#/parties/new" className="button primary">+ 파티 만들기</a></div><p className="muted intro">함께할 파티를 찾아 신청하고 나의 참여 일정을 준비하세요.</p>
     <div className="tabs"><button className={!mine ? 'active' : ''} onClick={() => { setMine(false); setOffset(0); }}>파티 모집</button><button className={mine ? 'active' : ''} onClick={() => { setMine(true); setOffset(0); }}>내 파티</button></div>
     <section className="panel"><form className="search" onSubmit={e => { e.preventDefault(); setOffset(0); setQuery(search.trim()); }}><input aria-label="파티명 검색" placeholder="파티명으로 검색" value={search} maxLength={100} onChange={e => setSearch(e.target.value)} /><button>검색</button><button type="button" onClick={() => setVersion(v => v + 1)}>새로고침</button></form>
-      <p className="small muted">{mine ? '내가 생성·신청·참여한 파티입니다. 탈퇴·강퇴 후에는 기본 정보만 확인할 수 있습니다.' : '출발일이 오늘 이후인 일반 파티입니다. 출발한 파티도 직접 링크에서 신청할 수 있습니다.'}</p>
+      <p className="small muted">{mine ? '내가 생성·신청·참여한 파티입니다. 탈퇴·강퇴 후에는 기본 정보만 확인할 수 있습니다.' : '생성자가 모집 마감하지 않은 일반 파티입니다. 출발일과 마감 예정 일시가 지나도 계속 표시됩니다.'}</p>
       {loading ? <p role="status">파티를 불러오고 있습니다…</p> : error ? <div className="alert" role="alert">{error}</div> : !rows.length ? <Empty>표시할 파티가 없습니다.</Empty> : <div className="party-list">{rows.map(p => <a href={`#/parties/${p.id}`} key={p.id} className="party-row"><div><div className="actions"><span className="tag">일반 파티</span><Badge status={p.status} />{p.my_status && <Badge status={p.my_status} />}</div><h2>{p.name}</h2><span className="small muted">출발 {p.departure_date} · 마감 예정 {dateTime(p.deadline_at)}</span></div><span className={p.applications_closed || p.status === 'DISSOLVED' ? 'muted' : 'green'}>{p.status === 'DISSOLVED' ? '해체됨' : p.applications_closed ? '모집 마감' : '신청 가능'} <span aria-hidden="true">→</span></span></a>)}</div>}
       <div className="pagination"><button disabled={offset === 0 || loading} onClick={() => setOffset(v => Math.max(0, v - 20))}>이전</button><span>{offset / 20 + 1} 페이지</span><button disabled={rows.length < 20 || loading || !!error} onClick={() => setOffset(v => v + 20)}>다음</button></div>
     </section></>;
-}
-
-function ParticipationEditor({ pc, data, troops, perform, busy }) {
-  const [slot1, setSlot1] = useState(pc.troop1 || '');
-  const [slot2, setSlot2] = useState(pc.troop2 || '');
-  const dates = daysFrom(data.party.departure_date);
-  const [date, setDate] = useState(dates[0]);
-  const existing = data.schedules.find(s => s.participation_id === pc.id && s.war_date === date);
-  return <div className="participation-editor"><form className="inline-form" onSubmit={e => { e.preventDefault(); perform('acres_participation_save', { p_id: pc.id, p_troop1: slot1, p_troop2: slot2 }); }}><fieldset disabled={busy}><div className="form-grid"><Field label="병종 1"><select value={slot1} onChange={e => setSlot1(e.target.value)}><option value="">미지정</option>{troops.filter(t => t.status !== 'INACTIVE' || t.code === pc.troop1 || t.code === pc.troop2).map(t => <option key={t.code} value={t.code} disabled={t.status === 'INACTIVE'}>{t.name}{t.status === 'INACTIVE' ? ' (비활성)' : ''}</option>)}</select></Field><Field label="병종 2"><select value={slot2} onChange={e => setSlot2(e.target.value)}><option value="">미지정</option>{troops.filter(t => t.status !== 'INACTIVE' || t.code === pc.troop1 || t.code === pc.troop2).map(t => <option key={t.code} value={t.code} disabled={t.status === 'INACTIVE'}>{t.name}{t.status === 'INACTIVE' ? ' (비활성)' : ''}</option>)}</select></Field></div>{!troops.length && <p className="small muted">등록된 병종이 없습니다. 운영자가 병종을 등록하면 선택할 수 있습니다.</p>}<button disabled={!!slot1 && slot1 === slot2}>병종 저장</button></fieldset></form>
-    <h3>전쟁 일정</h3><p className="small muted">KST 20:00~24:00 · 출발일 포함 12일 · 예외가 없으면 전체 참여</p><Field label="날짜 선택"><select value={date} onChange={e => setDate(e.target.value)}>{dates.map(d => <option key={d} value={d}>{d} · {labels[data.schedules.find(s => s.participation_id === pc.id && s.war_date === d)?.status || 'FULL']}</option>)}</select></Field>
-    <ScheduleForm key={`${date}:${existing?.status}:${existing?.memo}`} existing={existing} busy={busy} save={(status, memo) => perform('acres_schedule_save', { p_id: pc.id, p_date: date, p_status: status, p_memo: memo })} />
-  </div>;
-}
-function ScheduleForm({ existing, busy, save }) {
-  const [status, setStatus] = useState(existing?.status || 'FULL');
-  const [memo, setMemo] = useState(existing?.memo || '');
-  return <form onSubmit={e => { e.preventDefault(); save(status, memo.trim()); }}><fieldset disabled={busy}><div className="form-grid"><Field label="참여 상태"><select value={status} onChange={e => setStatus(e.target.value)}>{['FULL', 'PARTIAL', 'ABSENT'].map(s => <option value={s} key={s}>{labels[s]}</option>)}</select></Field><Field label={status === 'PARTIAL' ? '메모 (필수)' : '메모 (선택)'}><input value={memo} maxLength={1000} required={status === 'PARTIAL'} disabled={status === 'FULL'} onChange={e => setMemo(e.target.value)} placeholder="참여 가능한 시간 등을 입력하세요" /></Field></div><button>일정 저장</button></fieldset></form>;
 }
 
 function NoticeForm({ initial, onSave, busy, cancel }) {
@@ -72,6 +57,8 @@ function PartyDetail({ id, profile, characters }) {
   const [version, setVersion] = useState(0);
   const [tab, setTab] = useState('overview');
   const [noticeEdit, setNoticeEdit] = useState(null);
+  const [scheduleId, setScheduleId] = useState(null);
+  const [scheduleViewId, setScheduleViewId] = useState(null);
   const action = useAction();
   useEffect(() => {
     let active = true; setLoading(true); setError(''); setData(null);
@@ -106,6 +93,8 @@ function PartyDetail({ id, profile, characters }) {
   const owner = p.owner_id === profile.id;
   const admin = profile.role === 'ADMIN';
   const ownApproved = mine?.status === 'APPROVED';
+  const schedulePc = data.characters.find(pc => pc.id === scheduleId && pc.status === 'APPROVED');
+  const scheduleViewPc = data.characters.find(pc => pc.id === scheduleViewId && pc.status === 'APPROVED');
   const memberAction = (m, type, confirmation) => perform('acres_member_action', { p_party: id, p_member: m.id, p_action: type }, confirmation);
   const pcAction = (characterId, type, confirmation) => perform('acres_participation_action', { p_party: id, p_character: characterId, p_action: type }, confirmation);
   const mayApply = active && !p.applications_closed && !mine?.blocked && !['APPROVED', 'PENDING'].includes(mine?.status);
@@ -121,15 +110,11 @@ function PartyDetail({ id, profile, characters }) {
       {active && ownApproved && !owner && <button className="danger-text" disabled={action.busy} onClick={() => memberAction(mine, 'leave', '파티에서 탈퇴할까요? 모든 참여 캐릭터가 제외되고 이 파티의 병종·일정이 삭제됩니다.')}>파티 탈퇴</button>}
       {!canRead && <p className="muted">승인된 파티원만 참여 현황·캐릭터·일정·공지를 조회할 수 있습니다.</p>}
     </section>}
-    {selectedTab === 'members' && <section className="panel"><h2>참여 현황</h2>{data.members.filter(m => m.status === 'APPROVED').map(m => <article key={m.id} className="member-block"><div className="section-heading"><strong>{m.display_name}</strong><span className="tag">{m.user_id === p.owner_id ? '생성자' : m.is_manager ? '추가 관리자' : '파티원'}</span></div>{data.characters.filter(pc => pc.user_id === m.user_id && pc.status === 'APPROVED').map(pc => <div className="roster-character" key={pc.id}><div className="roster-character-heading"><strong>{characterLabel(pc)}</strong><CopyUidButton key={pc.game_uid} uid={pc.game_uid} characterName={pc.name} /></div><p className="small muted">{[pc.troop1, pc.troop2].filter(Boolean).map(code => troops.find(t => t.code === code)?.name || code).join(' · ') || '병종 미지정'}</p><div className="schedule-strip">{daysFrom(p.departure_date).map(day => { const s = data.schedules.find(x => x.participation_id === pc.id && x.war_date === day); return <div key={day} className={s?.status?.toLowerCase() || 'full'}><span>{day.slice(5)}</span><strong>{labels[s?.status || 'FULL']}</strong>{s?.memo && <small>{s.memo}</small>}</div>; })}</div></div>)}{!data.characters.some(pc => pc.user_id === m.user_id && pc.status === 'APPROVED') && <p className="small muted">참여 캐릭터가 아직 없습니다.</p>}</article>)}</section>}
+    {selectedTab === 'members' && <section className="panel"><h2>참여 현황</h2>{data.members.filter(m => m.status === 'APPROVED').map(m => <article key={m.id} className="member-block"><div className="section-heading"><strong>{m.display_name}</strong><span className="tag">{m.user_id === p.owner_id ? '생성자' : m.is_manager ? '추가 관리자' : '파티원'}</span></div>{data.characters.filter(pc => pc.user_id === m.user_id && pc.status === 'APPROVED').map(pc => <ParticipationSummaryRow key={pc.id} pc={pc} troops={troops} schedules={data.schedules} departureDate={p.departure_date} onSchedule={setScheduleViewId} />)}{!data.characters.some(pc => pc.user_id === m.user_id && pc.status === 'APPROVED') && <p className="small muted">참여 캐릭터가 아직 없습니다.</p>}</article>)}</section>}
     {selectedTab === 'characters' && <section className="panel"><h2>참여 캐릭터·일정</h2><p className="muted">병종과 일정은 캐릭터 소유자 또는 ADMIN만 수정할 수 있습니다.</p>
       {active && ownApproved && <div className="add-characters"><h3>내 캐릭터 추가</h3><div className="checks">{characters.map(c => { const pc = data.characters.find(x => x.character_id === c.id); return <button disabled={action.busy || ['APPROVED', 'PENDING_REAPPROVAL'].includes(pc?.status)} key={c.id} onClick={() => pcAction(c.id, 'add')}>{characterLabel(c)} · {pc ? labels[pc.status] : '추가'}</button>; })}</div>{!characters.length && <a href="#/account">내 캐릭터 등록</a>}</div>}
       {!data.characters.length && <Empty>참여 캐릭터가 없습니다.</Empty>}
-      {data.characters.map(pc => <article key={pc.id} className="character-detail"><div className="section-heading"><h3>{characterLabel(pc)}</h3><Badge status={pc.status} /></div><div className="actions">
-        {active && pc.status === 'APPROVED' && pc.user_id === profile.id && <button disabled={action.busy} onClick={() => pcAction(pc.character_id, 'remove', '이 캐릭터를 제외할까요? 해당 파티의 병종과 일정이 삭제됩니다.')}>본인 제외</button>}
-        {active && pc.status === 'APPROVED' && canManage && <button disabled={action.busy} className="danger-text" onClick={() => pcAction(pc.character_id, 'exclude', '관리자 권한으로 제외할까요? 병종·일정이 삭제되고 재등록 시 승인이 필요합니다.')}>관리자 제외</button>}
-        {active && pc.status === 'PENDING_REAPPROVAL' && canManage && <><button disabled={action.busy} onClick={() => pcAction(pc.character_id, 'approve')}>재승인</button><button disabled={action.busy} onClick={() => pcAction(pc.character_id, 'reject')}>재승인 거절</button></>}
-      </div>{active && pc.status === 'APPROVED' && pc.user_id === profile.id && <form className="swap-form" onSubmit={e => { e.preventDefault(); perform('acres_participation_swap', { p_party: id, p_old: pc.character_id, p_new: new FormData(e.currentTarget).get('replacement') }, '참여 캐릭터를 교체할까요? 기존 캐릭터의 이 파티 병종·일정이 삭제됩니다.'); }}><fieldset disabled={action.busy}><Field label={`${characterLabel(pc)} 교체 대상`}><select name="replacement" required defaultValue=""><option value="" disabled>교체할 내 캐릭터 선택</option>{characters.filter(c => c.id !== pc.character_id && !data.characters.some(x => x.character_id === c.id && ['APPROVED', 'PENDING_REAPPROVAL', 'EXCLUDED_BY_ADMIN'].includes(x.status))).map(c => <option key={c.id} value={c.id}>{characterLabel(c)}</option>)}</select></Field><button>캐릭터 교체</button></fieldset></form>}{pc.status === 'APPROVED' && (pc.user_id === profile.id || admin) && active && <ParticipationEditor key={`${pc.id}:${pc.troop1}:${pc.troop2}`} pc={pc} data={data} troops={troops} perform={perform} busy={action.busy} />}</article>)}
+      {data.characters.map(pc => <PartyCharacterRow key={`${pc.id}:${pc.troop1}:${pc.troop2}`} pc={pc} profile={profile} party={p} participations={data.characters} characters={characters} troops={troops} canManage={canManage} busy={action.busy} perform={perform} pcAction={pcAction} onSchedule={setScheduleId} />)}
     </section>}
     {selectedTab === 'notices' && <section className="panel"><h2>파티 공지</h2>{!data.notices.length && <Empty>등록된 공지가 없습니다.</Empty>}{data.notices.map(n => <article className="notice" key={n.id}>{n.pinned && <span className="tag accent">상단 고정</span>}<h3>{n.title}</h3><p className="small muted">{dateTime(n.created_at)}</p><p className="notice-body">{n.body}</p>{active && canManage && <div className="actions"><button disabled={action.busy} onClick={() => setNoticeEdit(n)}>수정</button><button disabled={action.busy} className="danger-text" onClick={() => perform('acres_notice_save', { p_party: id, p_id: n.id, p_title: n.title, p_body: n.body, p_pinned: n.pinned, p_delete: true }, '이 공지를 삭제할까요?')}>삭제</button><button disabled={action.busy} onClick={() => perform('acres_notice_save', { p_party: id, p_id: n.id, p_title: n.title, p_body: n.body, p_pinned: !n.pinned })}>{n.pinned ? '고정 해제' : '상단 고정'}</button></div>}</article>)}{active && canManage && <div className="notice-compose"><h3>{noticeEdit ? '공지 수정' : '공지 작성'}</h3><NoticeForm key={noticeEdit?.id || 'new'} initial={noticeEdit} busy={action.busy} cancel={() => setNoticeEdit(null)} onSave={args => { perform('acres_notice_save', { p_party: id, ...args }).then(ok => { if (ok) setNoticeEdit(null); }); }} /></div>}</section>}
     {selectedTab === 'map' && <PartyMap partyId={id} partyStatus={p.status} />}
@@ -142,6 +127,8 @@ function PartyDetail({ id, profile, characters }) {
       </div></article>)}
       {canOwn && <div className="management-box"><h3>파티 해체</h3><p className="muted">해체한 파티는 복구할 수 없으며 모든 변경 작업이 중지됩니다.</p><button className="danger" disabled={action.busy} onClick={() => perform('acres_party_update', { p_party: id, p_action: 'dissolve' }, '파티를 해체할까요? 이 작업은 되돌릴 수 없습니다.')}>파티 해체</button></div>}
     </>}</section>}
+    {selectedTab === 'members' && scheduleViewPc && canRead && <ScheduleModal key={`view-${scheduleViewPc.id}`} pc={scheduleViewPc} departureDate={p.departure_date} schedules={data.schedules} readOnly onClose={() => setScheduleViewId(null)} />}
+    {selectedTab === 'characters' && schedulePc && active && canRead && (schedulePc.user_id === profile.id || admin) && <ScheduleModal key={schedulePc.id} pc={schedulePc} departureDate={p.departure_date} schedules={data.schedules} onClose={() => setScheduleId(null)} onSaved={async () => { const next = await rpc('acres_party_detail', { p_party: id }); setData(next); }} />}
   </>;
 }
 
