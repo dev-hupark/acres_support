@@ -3,7 +3,6 @@ export const TROOP_CATEGORIES = [
   { code: 'ARCHER', name: '궁병', hue: 45 },
   { code: 'SPEAR', name: '창병', hue: 2 },
   { code: 'CAVALRY', name: '기병', hue: 138 },
-  { code: 'SIEGE', name: '병기', hue: 276 },
 ];
 const unknown = { code: 'UNCLASSIFIED', name: '미분류', hue: 0 };
 const colorFor = (category, index) => `hsl(${(category.hue + (index * 3 % 13) - 6 + 360) % 360}, ${category.code === unknown.code ? 0 : 76}%, ${38 + index * 7 % 31}%)`;
@@ -18,7 +17,7 @@ export function buildTroopStatistics(members, characters, troops) {
   const selections = new Map();
   for (const pc of participating) {
     [pc.troop1, pc.troop2].forEach((code, index) => {
-      if (!code) return;
+      if (!code || troopMap.get(code)?.category === 'SIEGE') return;
       if (!selections.has(code)) selections.set(code, []);
       selections.get(code).push({ memberId: pc.user_id, memberName: memberMap.get(pc.user_id).display_name, characterId: pc.id, characterName: pc.name, gameUid: pc.game_uid, slot: index + 1 });
     });
@@ -28,6 +27,7 @@ export function buildTroopStatistics(members, characters, troops) {
   const catalogByCategory = new Map([...TROOP_CATEGORIES, unknown].map(c => [c.code, []]));
   for (const code of new Set([...troopMap.keys(), ...selections.keys()])) {
     const troop = troopMap.get(code);
+    if (troop?.category === 'SIEGE') continue;
     const category = categoryMap.get(troop?.category) || unknown;
     catalogByCategory.get(category.code).push(code);
   }
@@ -42,5 +42,6 @@ export function buildTroopStatistics(members, characters, troops) {
   const groups = [...grouped.values()].filter(g => g.code !== unknown.code || g.total > 0);
   for (const group of groups) group.troops.sort((a, b) => a.name.localeCompare(b.name, 'ko') || a.code.localeCompare(b.code));
   const totalSelections = groups.reduce((sum, g) => sum + g.total, 0);
-  return { groups, memberCount: approved.length, characterCount: participating.length, totalSelections, emptySlots: participating.length * 2 - totalSelections };
+  const emptySlots = participating.reduce((sum, pc) => sum + [pc.troop1, pc.troop2].filter(code => !code).length, 0);
+  return { groups, memberCount: approved.length, characterCount: participating.length, totalSelections, emptySlots };
 }
