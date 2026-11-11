@@ -127,7 +127,7 @@ test('approved party members get the map tab between notices and management', as
   expect(await screen.findByRole('heading', { name: '맵 항목 등록' })).toBeInTheDocument();
 });
 
-test('party operation member names include game UID and handle absent UID', async () => {
+test('party operation shows member UIDs and pending badge clears after approval', async () => {
   const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   const members = [
     { id: 'member-1', user_id: 'applicant', display_name: '대기용사', game_uid: '000123', status: 'PENDING' },
@@ -138,10 +138,19 @@ test('party operation member names include game UID and handle absent UID', asyn
   supabase.auth.getSession.mockResolvedValue({ data: { session } });
   window.location.hash = `/parties/${id}`;
   render(<App />);
-  fireEvent.click(await screen.findByRole('button', { name: '운영 관리' }));
+  const management = await screen.findByRole('button', { name: '운영 관리 승인 대기 1명' });
+  expect(within(management).getByLabelText('승인 대기 1명')).toHaveTextContent('1');
+  fireEvent.click(management);
   expect(screen.getByText('대기용사 (000123)')).toBeInTheDocument();
   expect(screen.getByText('탈퇴한 회원')).toBeInTheDocument();
   expect(screen.queryByText(/\(null\)|\(undefined\)/)).not.toBeInTheDocument();
+  rpc.mockImplementation(async name => {
+    if (name === 'acres_member_action') { detail.members = members.map(m => m.status === 'PENDING' ? { ...m, status: 'APPROVED' } : m); return null; }
+    return detail;
+  });
+  fireEvent.click(screen.getByRole('button', { name: '승인' }));
+  await screen.findByRole('button', { name: '운영 관리' });
+  expect(screen.queryByLabelText(/승인 대기 \d+명/)).not.toBeInTheDocument();
 });
 
 test('participation status displays the participating character UID beside its name', async () => {
